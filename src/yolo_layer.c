@@ -404,7 +404,7 @@ int get_yolo_detections(layer l, int w, int h, int netw, int neth, float thresh,
     //printf("\n l.batch = %d, l.w = %d, l.h = %d, l.n = %d \n", l.batch, l.w, l.h, l.n);
     int i,j,n;
     float *predictions = l.output;
-    if (l.batch == 2) avg_flipped_yolo(l);
+    //if (l.batch == 2) avg_flipped_yolo(l);  //keyword_com
     int count = 0;
     for (i = 0; i < l.w*l.h; ++i){
         int row = i / l.w;
