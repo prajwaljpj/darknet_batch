@@ -18,6 +18,7 @@ extern "C" {
 #include <iostream> 
 #include <algorithm> 
 #include <iomanip> 
+#include <exception>
 
 #define BATCH 3
 
@@ -68,7 +69,7 @@ int YOLO_Batch::init(std::string cfgfile,
     char* c_cfg = const_cast<char*>(cfgfile.data()); 
     char* c_weight = const_cast<char*>(weightfile.data()); 
 
-    net = parse_network_cfg_custom(c_cfg,batch);  
+    net = parse_network_cfg_custom(c_cfg,batch, 0);  
     if(c_weight)
     {
         load_weights(&net, c_weight); 
@@ -655,3 +656,83 @@ BoxesVec YOLO_Batch::detect_batch_yolo(ImagePtrList img_ptrs, float thresh)
 
     return bbox_vec_batch;
 }
+
+
+/******************* YOLO BATCH START****************************/
+// Wrapper written over the init function to initialize the yolo model
+// input : <config file> <weights file> <names file> <batch size> <device ID>
+int YOLO_Batch::init_batch(std::string cfgfile, std::string weightfile, std::string namesfile, int batch_size,int deviceId)
+{
+    init(cfgfile, weightfile, batch_size, deviceId);
+    m_detectType = 1;
+    names = load_object_names(namesfile);
+
+    return 0;
+}
+
+// function for batch detection:
+// input: std::vector<image_t> images_list - list of images in image_t format 
+// output: 
+// void YOLO_Batch::run_detector_batch(std::vector<std::string> img_paths)
+BoxesVec YOLO_Batch::run_detector_batch(std::vector<image_t> images_list)
+{
+    std::cout << "[INFO] running batch detector \n";
+
+    // int batch = img_paths.size(); 
+    std::cout << "batch size: " << batch_size << std::endl; 
+    std::vector<cv::Mat> mats; 
+    for(int i=0;i<batch_size;i++) 
+    {
+        // cv::Mat img = cv::imread(img_paths[i]); 
+        cv::Mat img(images_list[i].h, images_list[i].w, CV_8UC3, images_list[i].data);
+
+        if(img.empty()) 
+        {
+            std::cout << "img empty" << std::endl; 
+            exit(-1);
+        }
+        cv::Mat small; 
+        cv::resize(img, small,cv::Size(416,416)); 
+        mats.push_back(small); 
+    }
+#if DISPLAY_OUT
+    // test bathch 
+    std::cout << "debug: detector initialization success" << std::endl; 
+
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    long int ms = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+#endif
+
+    BoxesVec bbox_vec_batch;
+    try {
+        //BoxesVec 
+        bbox_vec_batch = detect_mat_batch(mats); 
+    }
+    catch (std::exception& e)
+    {
+        std::cout << e.what() << "\n";
+    }
+
+#if DISPLAY_OUT
+    struct timeval tp1;
+    gettimeofday(&tp1, NULL);
+    long int ms1 = tp1.tv_sec * 1000 + tp1.tv_usec / 1000;
+    long int elapse_detection = ms1 - ms; 
+    
+    std::cout << "batch detection time:" << elapse_detection << " ms" << std::endl; 
+    for(int i=0;i<batch_size;i++)
+    {
+        cv::Mat visual_box; 
+
+
+        visual_box = draw_boxes(mats[i], bbox_vec_batch[i], names); 
+        // visualize 
+        cv::imshow("detection", visual_box);
+        cv::waitKey(); 
+    }
+#endif 
+
+    return bbox_vec_batch;
+}
+/******************* YOLO BATCH END ****************************/

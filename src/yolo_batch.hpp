@@ -16,6 +16,7 @@
 #endif
 #endif
 
+//#define DISPLAY_OUT
 
 #ifdef __cplusplus
 #include <memory>
@@ -31,10 +32,10 @@
 
 #endif // __cplusplus
 
-extern "C"
-{
-    #include "box.h" 
-}
+// extern "C"
+// {
+//     #include "box.h" 
+// }
 struct bbox_t {
     unsigned int x, y, w, h;    // (x,y) - top-left corner, (w, h) - width & height of bounded box
     float prob;                    // confidence - probability that the object was found correctly
@@ -68,7 +69,10 @@ public:
     bool m_waitStream; 
     int m_batchsize;       // batch size to be detected
     // 0 -- region 1 -- YOLO 
-    int m_detectType;      
+    int m_detectType;
+    std::vector<std::string> names;
+    int batch_size = 5;  
+  
 public: 
     YOLO_Batch(); 
     YOLO_Batch(std::string cfgfile, std::string weightfile, int batch=1, int deviceId=0); 
@@ -76,6 +80,11 @@ public:
 
     int init(std::string cfgfile, std::string weightfile, int batch = 1,int deviceId=0); 
     void release();  // you should call it explicitly at the end of program.
+
+    /* RBC added functions */ 
+    int init_batch(std::string cfgfile, std::string weightfile, std::string namesfile, int batch_size = 1,int deviceId=0);
+    // void run_detector_batch(std::vector<std::string> img_paths);
+    BoxesVec run_detector_batch(std::vector<image_t> img_paths);
 
     /**
      @brief  detect on single image
@@ -135,5 +144,6 @@ public:
     cv::Mat draw_boxes(cv::Mat mat_img,	std::vector<bbox_t> result_vec, std::vector<std::string> obj_names); 
 
 }; 
+
 
 #endif // _YOLO_BATCH_HPP_

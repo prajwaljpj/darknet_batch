@@ -1,11 +1,10 @@
 GPU=1
 CUDNN=1
-CUDNN_HALF=1
+CUDNN_HALF=0
 OPENCV=1
 AVX=0
-OPENMP=0
+OPENMP=1
 LIBSO=1
-ZED_CAMERA=0
 
 # set GPU=1 and CUDNN=1 to speedup on GPU
 # set CUDNN_HALF=1 to further speedup 3 x times (Mixed-precision on Tensor Cores) GPU: Volta, Xavier, Turing and higher
@@ -42,32 +41,30 @@ OS := $(shell uname)
 # For Jetson Tx2 or Drive-PX2 uncomment:
 # ARCH= -gencode arch=compute_62,code=[sm_62,compute_62]
 
-
+NEWEXEC=test
 VPATH=./src/
 EXEC=darknet
 OBJDIR=./obj/
 
 ifeq ($(LIBSO), 1)
-LIBNAMESO=libdarknet.so
+LIBNAMESO=darknet.so
 APPNAMESO=uselib
+MYSO=libyololib.so
 endif
 
 CC=gcc
 CPP=g++
-NVCC=nvcc
+NVCC=nvcc 
 OPTS=-Ofast
-LDFLAGS= -lm -pthread
+LDFLAGS= -lm -pthread 
 COMMON= -Iinclude/ -I3rdparty/stb/include
-CFLAGS=-Wall -Wfatal-errors -Wno-unused-result -Wno-unknown-pragmas -fPIC
+CFLAGS=-Wall -Wfatal-errors -Wno-unused-result -Wno-unknown-pragmas
 
-ifeq ($(DEBUG), 1)
-#OPTS= -O0 -g
-#OPTS= -Og -g
-COMMON+= -DDEBUG
-CFLAGS+= -DDEBUG
+ifeq ($(DEBUG), 1) 
+OPTS= -O0 -g
 else
-ifeq ($(AVX), 1)
-CFLAGS+= -ffp-contract=fast -mavx -mavx2 -msse3 -msse4.1 -msse4.2 -msse4a
+ifeq ($(AVX), 1) 
+CFLAGS+= -ffp-contract=fast -mavx -msse4.1 -msse4a
 endif
 endif
 
@@ -112,34 +109,34 @@ CFLAGS+= -DCUDNN_HALF
 ARCH+= -gencode arch=compute_70,code=[sm_70,compute_70]
 endif
 
-ifeq ($(ZED_CAMERA), 1)
-CFLAGS+= -DZED_STEREO -I/usr/local/zed/include
-LDFLAGS+= -L/usr/local/zed/lib -lsl_core -lsl_input -lsl_zed
-#-lstdc++ -D_GLIBCXX_USE_CXX11_ABI=0
-endif
-
-OBJ=http_stream.o gemm.o utils.o dark_cuda.o convolutional_layer.o list.o image.o activations.o im2col.o col2im.o blas.o crop_layer.o dropout_layer.o maxpool_layer.o softmax_layer.o data.o matrix.o network.o connected_layer.o cost_layer.o parser.o option_list.o detection_layer.o captcha.o route_layer.o writing.o box.o nightmare.o normalization_layer.o avgpool_layer.o coco.o dice.o yolo.o detector.o layer.o compare.o classifier.o local_layer.o swag.o shortcut_layer.o activation_layer.o rnn_layer.o gru_layer.o rnn.o rnn_vid.o crnn_layer.o demo.o tag.o cifar.o go.o batchnorm_layer.o art.o region_layer.o reorg_layer.o reorg_old_layer.o super.o voxel.o tree.o yolo_layer.o upsample_layer.o cuda.o darknet.o lstm_layer.o
-ifeq ($(GPU), 1)
-LDFLAGS+= -lstdc++
+OBJ=http_stream.o gemm.o utils.o dark_cuda.o convolutional_layer.o list.o image.o activations.o im2col.o col2im.o blas.o crop_layer.o dropout_layer.o maxpool_layer.o softmax_layer.o data.o matrix.o network.o connected_layer.o cost_layer.o parser.o option_list.o detection_layer.o captcha.o route_layer.o writing.o box.o nightmare.o normalization_layer.o avgpool_layer.o coco.o dice.o yolo.o detector.o layer.o compare.o classifier.o local_layer.o swag.o shortcut_layer.o activation_layer.o rnn_layer.o gru_layer.o rnn.o rnn_vid.o crnn_layer.o demo.o tag.o cifar.o go.o batchnorm_layer.o art.o region_layer.o reorg_layer.o reorg_old_layer.o super.o voxel.o tree.o yolo_layer.o upsample_layer.o lstm_layer.o
+ifeq ($(GPU), 1) 
+LDFLAGS+= -lstdc++ 
 OBJ+=convolutional_kernels.o activation_kernels.o im2col_kernels.o col2im_kernels.o blas_kernels.o crop_layer_kernels.o dropout_layer_kernels.o maxpool_layer_kernels.o network_kernels.o avgpool_layer_kernels.o
 endif
+
+
 
 OBJS = $(addprefix $(OBJDIR), $(OBJ))
 DEPS = $(wildcard src/*.h) Makefile include/darknet.h
 
-all: obj backup results setchmod $(EXEC) $(LIBNAMESO) $(APPNAMESO)
+all: obj backup results   $(LIBNAMESO) $(APPNAMESO) test_batch 
 
 ifeq ($(LIBSO), 1)
 CFLAGS+= -fPIC
 
-$(LIBNAMESO): $(OBJS) include/yolo_v2_class.hpp src/yolo_v2_class.cpp
-	$(CPP) -shared -std=c++11 -fvisibility=hidden -DLIB_EXPORTS $(COMMON) $(CFLAGS) $(OBJS) src/yolo_v2_class.cpp -o $@ $(LDFLAGS)
+$(LIBNAMESO): $(OBJS) 
+	$(CPP) -shared -std=c++11 -fvisibility=hidden -DYOLODLL_EXPORTS $(COMMON) $(CFLAGS) $(OBJS) src/yolo_v2_class.cpp -o $@ $(LDFLAGS)
+	
+$(APPNAMESO): $(LIBNAMESO) src/yolo_batch.hpp src/yolo_batch.cpp 
+	$(CPP) -shared -std=c++11 -fvisibility=hidden -DYOLODLL_EXPORTS $(COMMON) $(CFLAGS) $(OBJS) src/yolo_batch.cpp -o $@ $(LDFLAGS)
 
-$(APPNAMESO): $(LIBNAMESO) include/yolo_v2_class.hpp src/yolo_console_dll.cpp
-	$(CPP) -std=c++11 $(COMMON) $(CFLAGS) -o $@ src/yolo_console_dll.cpp $(LDFLAGS) -L ./ -l:$(LIBNAMESO)
 endif
 
-$(EXEC): $(OBJS)
+test_batch: $(OBJS) src/test_batch.cpp src/yolo_batch.hpp src/yolo_batch.cpp
+	$(CPP) -std=c++11 $(COMMON) $(CFLAGS) $^ -o $@ $(LDFLAGS) 
+
+$(NEWEXEC): $(OBJS)
 	$(CPP) -std=c++11 $(COMMON) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 $(OBJDIR)%.o: %.c $(DEPS)
@@ -157,10 +154,9 @@ backup:
 	mkdir -p backup
 results:
 	mkdir -p results
-setchmod:
-	chmod +x *.sh
 
 .PHONY: clean
 
 clean:
-	rm -rf $(OBJS) $(EXEC) $(LIBNAMESO) $(APPNAMESO)
+	rm -rf $(OBJS) $(EXEC) $(LIBNAMESO) $(MYSO)
+
