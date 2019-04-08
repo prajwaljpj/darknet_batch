@@ -305,9 +305,9 @@ LIB_API std::vector<bbox_t> Detector::detect(image_t img, float thresh, bool use
             bbox.prob = prob;
             bbox.track_id = 0;
             bbox.frames_counter = 0;
-            bbox.x_3d = NAN;
-            bbox.y_3d = NAN;
-            bbox.z_3d = NAN;
+            //bbox.x_3d = NAN;
+            //bbox.y_3d = NAN;
+            //bbox.z_3d = NAN;
 
             bbox_vec.push_back(bbox);
         }
