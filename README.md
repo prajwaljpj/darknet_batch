@@ -1,4 +1,4 @@
-# Yolo-v3 and Yolo-v2 for Windows and Linux
+﻿# Yolo-v3 and Yolo-v2 for Windows and Linux
 ### (neural network for object detection) - Tensor Cores can be used on [Linux](https://github.com/AlexeyAB/darknet#how-to-compile-on-linux) and [Windows](https://github.com/AlexeyAB/darknet#how-to-compile-on-windows-using-vcpkg)
 
 Contributors: https://github.com/AlexeyAB/darknet/graphs/contributors 
@@ -13,6 +13,7 @@ More details: http://pjreddie.com/darknet/yolo/
 * [Requirements (and how to install dependecies)](#requirements)
 * [Pre-trained models](#pre-trained-models)
 * [Explanations in issues](https://github.com/AlexeyAB/darknet/issues?q=is%3Aopen+is%3Aissue+label%3AExplanations)
+* [Yolo v3 in other frameworks (TensorFlow, OpenVINO, OpenCV-dnn, ...)](#yolo-v3-in-other-frameworks)
 
 0.  [Improvements in this repository](#improvements-in-this-repository)
 1.  [How to use](#how-to-use-on-the-command-line)
@@ -48,6 +49,10 @@ More details: http://pjreddie.com/darknet/yolo/
 * **GPU with CC >= 3.0**: https://en.wikipedia.org/wiki/CUDA#GPUs_supported
 * on Linux **GCC or Clang**, on Windows **MSVS 2017 (v15)** https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=Community&rel=15#
 
+Compiling on **Windows** by using `Cmake-GUI` as on this [**IMAGE**](https://user-images.githubusercontent.com/4096485/55107892-6becf380-50e3-11e9-9a0a-556a943c429a.png): Configure -> Optional platform for generator (Set: x64) -> Finish -> Generate -> Open Project -> x64 & Release -> Build -> Build solution
+
+Compiling on **Linux** by using command `make` (or alternative way by using command: `cmake . && make` )
+
 #### Pre-trained models
 
 There are weights-file for different cfg-files (smaller size -> faster speed & lower accuracy:
@@ -65,6 +70,12 @@ There are weights-file for different cfg-files (smaller size -> faster speed & l
 Put it near compiled: darknet.exe
 
 You can get cfg-files by path: `darknet/cfg/`
+
+#### Yolo v3 in other frameworks
+
+* Convert `yolov3.weights`/`cfg` model to **TensorFlow**: by using [mystic123](https://github.com/mystic123/tensorflow-yolo-v3) or [jinyu121](https://github.com/jinyu121/DW2TF) projects, and [TensorFlow-lite](https://www.tensorflow.org/lite/guide/get_started#2_convert_the_model_format)
+* To use Yolo v3 model in **Intel OpenVINO** (Myriad X / USB Neural Compute Stick / Arria FPGA): read this [manual](https://software.intel.com/en-us/articles/OpenVINO-Using-TensorFlow#converting-a-darknet-yolo-model)
+* **OpenCV-dnn** is very fast DNN implementation on CPU (x86/ARM-Android), use `yolov3.weights`/`cfg` with: [C++ example](https://github.com/opencv/opencv/blob/8c25a8eb7b10fb50cda323ee6bec68aa1a9ce43c/samples/dnn/object_detection.cpp#L192-L221), [Python example](https://github.com/opencv/opencv/blob/8c25a8eb7b10fb50cda323ee6bec68aa1a9ce43c/samples/dnn/object_detection.py#L129-L150)
 
 ##### Examples of results
 
@@ -113,14 +124,16 @@ On Linux find executable file `./darknet` in the root directory, while on Window
 * **JSON and MJPEG server** that allows multiple connections from your soft or Web-browser `ip-address:8070` and 8090: `./darknet detector demo ./cfg/coco.data ./cfg/yolov3.cfg ./yolov3.weights test50.mp4 -json_port 8070 -mjpeg_port 8090 -ext_output`
 * Yolo v3 Tiny **on GPU #1**: `darknet.exe detector demo cfg/coco.data cfg/yolov3-tiny.cfg yolov3-tiny.weights -i 1 test.mp4`
 * Alternative method Yolo v3 COCO - image: `darknet.exe detect cfg/yolov3.cfg yolov3.weights -i 0 -thresh 0.25`
-* Train on **Amazon EC2**, to see mAP & Loss-chart using URL like: `http://ec2-35-160-228-91.us-west-2.compute.amazonaws.com:8090` in the Chrome/Firefox: 
+* Train on **Amazon EC2**, to see mAP & Loss-chart using URL like: `http://ec2-35-160-228-91.us-west-2.compute.amazonaws.com:8090` in the Chrome/Firefox (**Darknet should be compiled with OpenCV**): 
     `./darknet detector train cfg/coco.data yolov3.cfg darknet53.conv.74 -dont_show -mjpeg_port 8090 -map`
-* 186 MB Yolo9000 - image: `darknet.exe detector test cfg/combine9k.data yolo9000.cfg yolo9000.weights`
+* 186 MB Yolo9000 - image: `darknet.exe detector test cfg/combine9k.data cfg/yolo9000.cfg yolo9000.weights`
 * Remeber to put data/9k.tree and data/coco9k.map under the same folder of your app if you use the cpp api to build an app
+* To process a list of images `data/train.txt` and save results of detection to `result.json` file use: 
+    `darknet.exe detector test cfg/coco.data cfg/yolov3.cfg yolov3.weights -ext_output -dont_show -out result.json < data/train.txt`
 * To process a list of images `data/train.txt` and save results of detection to `result.txt` use:                             
-    `darknet.exe detector test cfg/coco.data yolov3.cfg yolov3.weights -dont_show -ext_output < data/train.txt > result.txt`
+    `darknet.exe detector test cfg/coco.data cfg/yolov3.cfg yolov3.weights -dont_show -ext_output < data/train.txt > result.txt`
 * Pseudo-lableing - to process a list of images `data/new_train.txt` and save results of detection in Yolo training format for each image as label `<image_name>.txt` (in this way you can increase the amount of training data) use:
-    `darknet.exe detector test cfg/coco.data yolov3.cfg yolov3.weights -thresh 0.25 -dont_show -save_labels < data/new_train.txt`
+    `darknet.exe detector test cfg/coco.data cfg/yolov3.cfg yolov3.weights -thresh 0.25 -dont_show -save_labels < data/new_train.txt`
 * To calculate anchors: `darknet.exe detector calc_anchors data/obj.data -num_of_clusters 9 -width 416 -height 416`
 * To check accuracy mAP@IoU=50: `darknet.exe detector map data/obj.data yolo-obj.cfg backup\yolo-obj_7000.weights`
 * To check accuracy mAP@IoU=75: `darknet.exe detector map data/obj.data yolo-obj.cfg backup\yolo-obj_7000.weights -iou_thresh 0.75`
@@ -155,6 +168,10 @@ Before make, you can set such options in the `Makefile`: [link](https://github.c
 To run Darknet on Linux use examples from this article, just use `./darknet` instead of `darknet.exe`, i.e. use this command: `./darknet detector test ./cfg/coco.data ./cfg/yolov3.cfg ./yolov3.weights`
 
 ### How to compile on Windows (using `vcpkg`)
+
+If you have installed: MSVS 2015/2017, CUDA 10, cuDNN 7.x, OpenCV 3.x. Then compile Darknet by using `C:\Program Files\CMake\bin\cmake-gui.exe` as on this [**IMAGE**](https://user-images.githubusercontent.com/4096485/55107892-6becf380-50e3-11e9-9a0a-556a943c429a.png): Configure -> Optional platform for generator (Set: x64) -> Finish -> Generate -> Open Project -> x64 & Release -> Build -> Build solution
+
+Otherwise:
 
 1. Install or update Visual Studio to at least version 2017, making sure to have it fully patched (run again the installer if not sure to automatically update to latest version). If you need to install from scratch, download VS from here: [Visual Studio 2017 Community](http://visualstudio.com)
 
@@ -378,7 +395,7 @@ It will create `.txt`-file for each `.jpg`-image-file - in the same directory an
 
 9. After training is complete - get result `yolo-obj_final.weights` from path `build\darknet\x64\backup\`
 
- * After each 100 iterations you can stop and later start training from this point. For example, after 2000 iterations you can stop training, and later just copy `yolo-obj_2000.weights` from `build\darknet\x64\backup\` to `build\darknet\x64\` and start training using: `darknet.exe detector train data/obj.data yolo-obj.cfg yolo-obj_2000.weights`
+ * After each 100 iterations you can stop and later start training from this point. For example, after 2000 iterations you can stop training, and later just start training using: `darknet.exe detector train data/obj.data yolo-obj.cfg backup\yolo-obj_2000.weights`
 
     (in the original repository https://github.com/pjreddie/darknet the weights-file is saved only once every 10 000 iterations `if(iterations > 1000)`)
 
